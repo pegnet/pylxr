@@ -29,21 +29,12 @@ class LXR:
 
     def h(self, src: bytes) -> bytes:
         h = np.zeros(self.hash_size, dtype='uint64')
-        a = u64(self.seed_int)
+        a = self.seed_int
         s1, s2, s3 = u64(0), u64(0), u64(0)
-        mask = u64(self.map_size - 1)
+        mask = self.map_size - u64(1)
 
-        index = u64(0)
-        # Fast spin to prevent caching state
-        for _ in src:
-            if index >= self.hash_size:
-                index = u64(0)
-            a = index << u64(1) ^ a << u64(7) ^ a >> u64(5)
-            s1 = s1 << u64(9) ^ s1 >> u64(3) ^ a
-            h[index] = s1 ^ a
-            a, s1, s2, s3 = s3, a, s1, s2
-            index += u64(1)
-
+        # Cache these casted values since they're used a lot in the hashing loop
+        b = self.byte_map
         _0 = u64(0)
         _1 = u64(1)
         _3 = u64(3)
@@ -61,7 +52,19 @@ class LXR:
         _23 = u64(23)
         _27 = u64(27)
 
-        index = u64(0)
+        # Fast spin to prevent caching state
+        index = _0
+        for _ in src:
+            if index >= self.hash_size:
+                index = _0
+            a = index << _1 ^ a << _7 ^ a >> _5
+            s1 = s1 << _9 ^ s1 >> _3 ^ a
+            h[index] = s1 ^ a
+            a, s1, s2, s3 = s3, a, s1, s2
+            index += _1
+
+        # Actual work to compute the hash
+        index = _0
         for bit in src:
             bit = u64(bit)
             if index >= self.hash_size:
@@ -81,91 +84,89 @@ class LXR:
             # the ByteMap are also evenly distributed, and the
             # deltas between bytes provided map to a curve expected
             # (fewer maximum and minimum deltas, and most deltas around zero.
-            s1 = s1 << _9 ^ s1 >> _1 ^ a ^ self.byte_map[(a >> _5 ^ bit) & mask] << _3
-            s1 = s1 << _5 ^ s1 >> _3 ^ self.byte_map[(s1 ^ bit) & mask] << _7
-            s1 = s1 << _7 ^ s1 >> _7 ^ self.byte_map[(a ^ s1 >> _7) & mask] << _5
-            s1 = s1 << _11 ^ s1 >> _5 ^ self.byte_map[(bit ^ a >> _11 ^ s1) & mask] << _27
+            s1 = s1 << _9 ^ s1 >> _1 ^ a ^ b[(a >> _5 ^ bit) & mask] << _3
+            s1 = s1 << _5 ^ s1 >> _3 ^ b[(s1 ^ bit) & mask] << _7
+            s1 = s1 << _7 ^ s1 >> _7 ^ b[(a ^ s1 >> _7) & mask] << _5
+            s1 = s1 << _11 ^ s1 >> _5 ^ b[(bit ^ a >> _11 ^ s1) & mask] << _27
 
             h[index] = s1 ^ a ^ h[index] << _7 ^ h[index] >> _13
 
-            a = a << _17 ^ a >> _5 ^ s1 ^ self.byte_map[(a ^ s1 >> _27 ^ bit) & mask] << _3
-            a = a << _13 ^ a >> _3 ^ self.byte_map[(a ^ s1) & mask] << _7
-            a = a << _15 ^ a >> _7 ^ self.byte_map[(a >> _7 ^ s1) & mask] << _11
-            a = a << _9 ^ a >> _11 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _3
+            a = a << _17 ^ a >> _5 ^ s1 ^ b[(a ^ s1 >> _27 ^ bit) & mask] << _3
+            a = a << _13 ^ a >> _3 ^ b[(a ^ s1) & mask] << _7
+            a = a << _15 ^ a >> _7 ^ b[(a >> _7 ^ s1) & mask] << _11
+            a = a << _9 ^ a >> _11 ^ b[(bit ^ a ^ s1) & mask] << _3
 
-            s1 = s1 << _7 ^ s1 >> _27 ^ a ^ self.byte_map[(a >> _3) & mask] << _13
-            s1 = s1 << _3 ^ s1 >> _13 ^ self.byte_map[(s1 ^ bit) & mask] << _11
-            s1 = s1 << _8 ^ s1 >> _11 ^ self.byte_map[(a ^ s1 >> _11) & mask] << _9
-            s1 = s1 << _6 ^ s1 >> _9 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _3
+            s1 = s1 << _7 ^ s1 >> _27 ^ a ^ b[(a >> _3) & mask] << _13
+            s1 = s1 << _3 ^ s1 >> _13 ^ b[(s1 ^ bit) & mask] << _11
+            s1 = s1 << _8 ^ s1 >> _11 ^ b[(a ^ s1 >> _11) & mask] << _9
+            s1 = s1 << _6 ^ s1 >> _9 ^ b[(bit ^ a ^ s1) & mask] << _3
 
-            a = a << _23 ^ a >> _3 ^ s1 ^ self.byte_map[(a ^ bit ^ s1 >> _3) & mask] << _7
-            a = a << _17 ^ a >> _7 ^ self.byte_map[(a ^ s1 >> _3) & mask] << _5
-            a = a << _13 ^ a >> _5 ^ self.byte_map[(a >> _5 ^ s1) & mask] << _1
-            a = a << _11 ^ a >> _1 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _7
+            a = a << _23 ^ a >> _3 ^ s1 ^ b[(a ^ bit ^ s1 >> _3) & mask] << _7
+            a = a << _17 ^ a >> _7 ^ b[(a ^ s1 >> _3) & mask] << _5
+            a = a << _13 ^ a >> _5 ^ b[(a >> _5 ^ s1) & mask] << _1
+            a = a << _11 ^ a >> _1 ^ b[(bit ^ a ^ s1) & mask] << _7
 
-            s1 = s1 << _5 ^ s1 >> _3 ^ a ^ self.byte_map[(a >> _7 ^ s1 >> _3) & mask] << _6
-            s1 = s1 << _8 ^ s1 >> _6 ^ self.byte_map[(s1 ^ bit) & mask] << _11
-            s1 = s1 << _11 ^ s1 >> _11 ^ self.byte_map[(a ^ s1 >> _11) & mask] << _5
-            s1 = s1 << _7 ^ s1 >> _5 ^ self.byte_map[(bit ^ a >> _7 ^ a ^ s1) & mask] << _17
+            s1 = s1 << _5 ^ s1 >> _3 ^ a ^ b[(a >> _7 ^ s1 >> _3) & mask] << _6
+            s1 = s1 << _8 ^ s1 >> _6 ^ b[(s1 ^ bit) & mask] << _11
+            s1 = s1 << _11 ^ s1 >> _11 ^ b[(a ^ s1 >> _11) & mask] << _5
+            s1 = s1 << _7 ^ s1 >> _5 ^ b[(bit ^ a >> _7 ^ a ^ s1) & mask] << _17
 
-            s2 = s2 << _3 ^ s2 >> _17 ^ s1 ^ self.byte_map[(a ^ s2 >> _5 ^ bit) & mask] << _13
-            s2 = s2 << _6 ^ s2 >> _13 ^ self.byte_map[s2 & mask] << _11
-            s2 = s2 << _11 ^ s2 >> _11 ^ self.byte_map[(a ^ s1 ^ s2 >> _11) & mask] << _23
-            s2 = s2 << _4 ^ s2 >> _23 ^ self.byte_map[(bit ^ a >> _8 ^ a ^ s2 >> _10) & mask] << _1
+            s2 = s2 << _3 ^ s2 >> _17 ^ s1 ^ b[(a ^ s2 >> _5 ^ bit) & mask] << _13
+            s2 = s2 << _6 ^ s2 >> _13 ^ b[s2 & mask] << _11
+            s2 = s2 << _11 ^ s2 >> _11 ^ b[(a ^ s1 ^ s2 >> _11) & mask] << _23
+            s2 = s2 << _4 ^ s2 >> _23 ^ b[(bit ^ a >> _8 ^ a ^ s2 >> _10) & mask] << _1
 
             s1 = s2 << _3 ^ s2 >> _1 ^ h[index] ^ bit
-            a = a << _9 ^ a >> _7 ^ s1 >> _1 ^ self.byte_map[(s2 >> _1 ^ h[index]) & mask] << _5
+            a = a << _9 ^ a >> _7 ^ s1 >> _1 ^ b[(s2 >> _1 ^ h[index]) & mask] << _5
 
             s1, s2, s3 = s3, s1, s2
             index += _1
 
         # Reduction pass
         # Done by iterating over hs[] to produce the bytes[] hash
-        #
         # At this point, we have HBits of state in hs.  We need to reduce them down to a byte,
         # And we do so by doing a bit more bitwise math, and mapping the values through our byte map.
-
         hash_bytes = bytearray(self.hash_size)
         # Roll over all the hs (one int64 value for every byte in the resulting hash) and reduce them to byte values
         for i, bit in enumerate(h):
             # Duplicated from above to reduce function call overhead
-            s1 = s1 << _9 ^ s1 >> _1 ^ a ^ self.byte_map[(a >> _5 ^ bit) & mask] << _3
-            s1 = s1 << _5 ^ s1 >> _3 ^ self.byte_map[(s1 ^ bit) & mask] << _7
-            s1 = s1 << _7 ^ s1 >> _7 ^ self.byte_map[(a ^ s1 >> _7) & mask] << _5
-            s1 = s1 << _11 ^ s1 >> _5 ^ self.byte_map[(bit ^ a >> _11 ^ s1) & mask] << _27
+            s1 = s1 << _9 ^ s1 >> _1 ^ a ^ b[(a >> _5 ^ bit) & mask] << _3
+            s1 = s1 << _5 ^ s1 >> _3 ^ b[(s1 ^ bit) & mask] << _7
+            s1 = s1 << _7 ^ s1 >> _7 ^ b[(a ^ s1 >> _7) & mask] << _5
+            s1 = s1 << _11 ^ s1 >> _5 ^ b[(bit ^ a >> _11 ^ s1) & mask] << _27
 
             h[i] = s1 ^ a ^ h[i] << _7 ^ h[i] >> _13
 
-            a = a << _17 ^ a >> _5 ^ s1 ^ self.byte_map[(a ^ s1 >> _27 ^ bit) & mask] << _3
-            a = a << _13 ^ a >> _3 ^ self.byte_map[(a ^ s1) & mask] << _7
-            a = a << _15 ^ a >> _7 ^ self.byte_map[(a >> _7 ^ s1) & mask] << _11
-            a = a << _9 ^ a >> _11 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _3
+            a = a << _17 ^ a >> _5 ^ s1 ^ b[(a ^ s1 >> _27 ^ bit) & mask] << _3
+            a = a << _13 ^ a >> _3 ^ b[(a ^ s1) & mask] << _7
+            a = a << _15 ^ a >> _7 ^ b[(a >> _7 ^ s1) & mask] << _11
+            a = a << _9 ^ a >> _11 ^ b[(bit ^ a ^ s1) & mask] << _3
 
-            s1 = s1 << _7 ^ s1 >> _27 ^ a ^ self.byte_map[(a >> _3) & mask] << _13
-            s1 = s1 << _3 ^ s1 >> _13 ^ self.byte_map[(s1 ^ bit) & mask] << _11
-            s1 = s1 << _8 ^ s1 >> _11 ^ self.byte_map[(a ^ s1 >> _11) & mask] << _9
-            s1 = s1 << _6 ^ s1 >> _9 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _3
+            s1 = s1 << _7 ^ s1 >> _27 ^ a ^ b[(a >> _3) & mask] << _13
+            s1 = s1 << _3 ^ s1 >> _13 ^ b[(s1 ^ bit) & mask] << _11
+            s1 = s1 << _8 ^ s1 >> _11 ^ b[(a ^ s1 >> _11) & mask] << _9
+            s1 = s1 << _6 ^ s1 >> _9 ^ b[(bit ^ a ^ s1) & mask] << _3
 
-            a = a << _23 ^ a >> _3 ^ s1 ^ self.byte_map[(a ^ bit ^ s1 >> _3) & mask] << _7
-            a = a << _17 ^ a >> _7 ^ self.byte_map[(a ^ s1 >> _3) & mask] << _5
-            a = a << _13 ^ a >> _5 ^ self.byte_map[(a >> _5 ^ s1) & mask] << _1
-            a = a << _11 ^ a >> _1 ^ self.byte_map[(bit ^ a ^ s1) & mask] << _7
+            a = a << _23 ^ a >> _3 ^ s1 ^ b[(a ^ bit ^ s1 >> _3) & mask] << _7
+            a = a << _17 ^ a >> _7 ^ b[(a ^ s1 >> _3) & mask] << _5
+            a = a << _13 ^ a >> _5 ^ b[(a >> _5 ^ s1) & mask] << _1
+            a = a << _11 ^ a >> _1 ^ b[(bit ^ a ^ s1) & mask] << _7
 
-            s1 = s1 << _5 ^ s1 >> _3 ^ a ^ self.byte_map[(a >> _7 ^ s1 >> _3) & mask] << _6
-            s1 = s1 << _8 ^ s1 >> _6 ^ self.byte_map[(s1 ^ bit) & mask] << _11
-            s1 = s1 << _11 ^ s1 >> _11 ^ self.byte_map[(a ^ s1 >> _11) & mask] << _5
-            s1 = s1 << _7 ^ s1 >> _5 ^ self.byte_map[(bit ^ a >> _7 ^ a ^ s1) & mask] << _17
+            s1 = s1 << _5 ^ s1 >> _3 ^ a ^ b[(a >> _7 ^ s1 >> _3) & mask] << _6
+            s1 = s1 << _8 ^ s1 >> _6 ^ b[(s1 ^ bit) & mask] << _11
+            s1 = s1 << _11 ^ s1 >> _11 ^ b[(a ^ s1 >> _11) & mask] << _5
+            s1 = s1 << _7 ^ s1 >> _5 ^ b[(bit ^ a >> _7 ^ a ^ s1) & mask] << _17
 
-            s2 = s2 << _3 ^ s2 >> _17 ^ s1 ^ self.byte_map[(a ^ s2 >> _5 ^ bit) & mask] << _13
-            s2 = s2 << _6 ^ s2 >> _13 ^ self.byte_map[s2 & mask] << _11
-            s2 = s2 << _11 ^ s2 >> _11 ^ self.byte_map[(a ^ s1 ^ s2 >> _11) & mask] << _23
-            s2 = s2 << _4 ^ s2 >> _23 ^ self.byte_map[(bit ^ a >> _8 ^ a ^ s2 >> _10) & mask] << _1
+            s2 = s2 << _3 ^ s2 >> _17 ^ s1 ^ b[(a ^ s2 >> _5 ^ bit) & mask] << _13
+            s2 = s2 << _6 ^ s2 >> _13 ^ b[s2 & mask] << _11
+            s2 = s2 << _11 ^ s2 >> _11 ^ b[(a ^ s1 ^ s2 >> _11) & mask] << _23
+            s2 = s2 << _4 ^ s2 >> _23 ^ b[(bit ^ a >> _8 ^ a ^ s2 >> _10) & mask] << _1
 
             s1 = s2 << _3 ^ s2 >> _1 ^ h[i] ^ bit
-            a = a << _9 ^ a >> _7 ^ s1 >> _1 ^ self.byte_map[(s2 >> _1 ^ h[i]) & mask] << _5
+            a = a << _9 ^ a >> _7 ^ s1 >> _1 ^ b[(s2 >> _1 ^ h[i]) & mask] << _5
 
             s1, s2, s3 = s3, s1, s2
-            hash_bytes[i] = self.byte_map[a & mask] ^ self.byte_map[h[i] & mask]
+            hash_bytes[i] = b[a & mask] ^ b[h[i] & mask]
 
         return bytes(hash_bytes)
 
