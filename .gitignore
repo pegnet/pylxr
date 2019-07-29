@@ -1,0 +1,6 @@
+venv
+.idea
+__pycache__
+pylxr.egg-info
+build
+dist
