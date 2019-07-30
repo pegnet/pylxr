@@ -13,6 +13,7 @@ class LXR:
     passes: int = 5
     seed: bytes = b"\xfa\xfa\xec\xec\xfa\xfa\xec\xec"
     hash_size: u64 = 256
+    verbose: bool = False
 
     seed_int: u64 = field(init=False)
     map_size: u64 = field(init=False)
@@ -183,16 +184,15 @@ class LXR:
 
         # Fill the ByteMap with bytes ranging from 0 to 255.  As long as map_size % 256 == 0, this
         # looping and masking works just fine.
-        print("Initializing the Table")
+        print("pylxr: initializing the table...")
         for i in self.byte_map:
             self.byte_map[i] = u64(i)
 
         # Now what we want to do is just mix it all up.  Take every byte in the ByteMap list, and exchange it
         # for some other byte in the ByteMap list. Note that we do this over and over, mixing and more mixing
         # the ByteMap, but maintaining the ratio of each byte value in the ByteMap list.
-        print("Shuffling the Table")
+        print("pylxr: shuffling the table...")
         for loop in range(self.passes):
-            print(f"Pass {loop}")
             start = datetime.datetime.now()
             for iteration, i in enumerate(self.byte_map):
                 # The random index used to shuffle the ByteMap is itself computed through the ByteMap table
@@ -204,7 +204,7 @@ class LXR:
                 self.byte_map[i], self.byte_map[j] = self.byte_map[j], self.byte_map[i]
             n = len(self.byte_map) / 1024000
             time = datetime.datetime.now() - start
-            print(f" Index {n} Meg of {n} Meg -- Pass is 100% Complete (time taken: {time})")
+            print(f"pylxr: pass {loop} completed (time taken: {time})")
 
     def _read_table(self):
         home = os.getenv("HOME")
@@ -214,7 +214,8 @@ class LXR:
             os.mkdir(path)
 
         filename = f"{path}/lxrhash-seed-{self.seed.hex()}-passes-{self.passes}-size-{self.map_size_bits}.dat"
-        print(f"Reading ByteMap Table {filename}")
+        if self.verbose:
+            print(f"Reading ByteMap Table {filename}")
         start = datetime.datetime.now()
         found = False
         if os.path.exists(filename):
@@ -225,10 +226,13 @@ class LXR:
                     found = True
 
         if not found:
-            print("Table not found, Generating ByteMap Table")
+            if self.verbose:
+                print("Table not found, Generating ByteMap Table")
             self._generate_table()
-            print("Writing ByteMap Table")
+            if self.verbose:
+                print("Writing ByteMap Table")
             with open(filename, "wb+") as f:
                 f.write(self.byte_map)
 
-        print(f"Done. Total time taken: {datetime.datetime.now() - start}")
+        if self.verbose:
+            print(f"Done. Total time taken: {datetime.datetime.now() - start}")
