@@ -57,7 +57,7 @@ class LXR:
         for _ in src:
             if index >= self.hash_size:
                 index = _0
-            a = index << _1 ^ a << _7 ^ a >> _5
+            a = index << _1 ^ index >> _3 ^ a << _7 ^ a >> _5
             s1 = s1 << _9 ^ s1 >> _3 ^ a
             h[index] = s1 ^ a
             a, s1, s2, s3 = s3, a, s1, s2
