@@ -129,7 +129,8 @@ class LXR:
         # And we do so by doing a bit more bitwise math, and mapping the values through our byte map.
         hash_bytes = bytearray(self.hash_size)
         # Roll over all the hs (one int64 value for every byte in the resulting hash) and reduce them to byte values
-        for i, bit in enumerate(h):
+        for i in range(len(h) - 1, -1, -1):
+            bit = h[i]
             # Duplicated from above to reduce function call overhead
             s1 = s1 << _9 ^ s1 >> _1 ^ a ^ b[(a >> _5 ^ bit) & mask] << _3
             s1 = s1 << _5 ^ s1 >> _3 ^ b[(s1 ^ bit) & mask] << _7
