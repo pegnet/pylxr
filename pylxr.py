@@ -24,12 +24,12 @@ class LXR:
             raise ValueError("Map size must be between 8 and 34 bits")
         self.seed_int = u64(int(self.seed.hex(), 16))
         self.map_size = u64(1) << u64(self.map_size_bits)
-        self.byte_map = np.zeros(self.map_size, dtype='uint64')
+        self.byte_map = np.zeros(self.map_size, dtype="uint64")
         self.hash_size = u64((self.hash_size + 7) / 8)
         self._read_table()
 
     def h(self, src: bytes) -> bytes:
-        h = np.zeros(self.hash_size, dtype='uint64')
+        h = np.zeros(self.hash_size, dtype="uint64")
         a = self.seed_int
         s1, s2, s3 = u64(0), u64(0), u64(0)
         mask = self.map_size - u64(1)
@@ -47,21 +47,26 @@ class LXR:
         _9 = u64(9)
         _10 = u64(10)
         _11 = u64(11)
+        _12 = u64(12)
         _13 = u64(13)
         _15 = u64(15)
+        _16 = u64(16)
         _17 = u64(17)
+        _20 = u64(20)
         _23 = u64(23)
         _27 = u64(27)
 
         # Fast spin to prevent caching state
         index = _0
-        for _ in src:
+        for v in src:
+            v = u64(v)
             if index >= self.hash_size:
                 index = _0
-            a = index << _1 ^ index >> _3 ^ a << _7 ^ a >> _5
-            s1 = s1 << _9 ^ s1 >> _3 ^ a
+            bit = b[(a ^ v) & mask]
+            a = a << _7 ^ a >> _5 ^ v << _20 ^ v << _16 ^ v ^ bit << _20 ^ bit << _12 ^ bit << _4
+            s1 = s1 << _9 ^ s1 >> _3 ^ h[index]
             h[index] = s1 ^ a
-            a, s1, s2, s3 = s3, a, s1, s2
+            s1, s2, s3 = s3, s1, s2
             index += _1
 
         # Actual work to compute the hash
