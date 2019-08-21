@@ -8,7 +8,7 @@ extensions = [Extension(name="cpylxr", sources=["cpylxr.pyx"])]
 
 setup(
     name="pylxr",
-    version="0.0.2",
+    version="0.0.3",
     description="A small library for using PegNet's custom LXR Hash",
     author="Sam Barnes",
     author_email="sambarnes@factom.com",
