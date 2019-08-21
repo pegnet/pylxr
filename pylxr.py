@@ -31,7 +31,7 @@ class LXR:
 
     def h(self, src: bytes) -> bytes:
         src_arr = np.frombuffer(src, dtype=np.uint8).astype(np.uint8)
-        return cpylxr.h(self.byte_map, src_arr).astype(np.uint8).tobytes()
+        return cpylxr.h(self.map_size_bits, self.byte_map, src_arr).astype(np.uint8).tobytes()
 
     def _generate_table(self):
         # Our own "random" generator that really is just used to shuffle values

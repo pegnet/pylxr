@@ -2,20 +2,18 @@
 
 #define BYTE unsigned char
 #define UINT unsigned long
-#define BITS 25
 #define HASHSIZE 32
 #define SEED 0xFAFAECECFAFAECEC
 
 UINT firstrand = 2458719153079158768;
 UINT firstb    = 4631534797403582785;
 UINT firstv    = 3523455478921636871;
-
-UINT mapSizeBits = BITS;
-UINT mapSize = 1 << BITS;
 UINT passes = 5;
 
-void h_in_C(BYTE byte_map[], BYTE src[], int len, BYTE hash_arr[])
+void h_in_C(int map_size_bits, BYTE byte_map[], BYTE src[], int len, BYTE hash_arr[])
 {
+    UINT mapSize = 1 << map_size_bits;
+
     UINT hs[HASHSIZE];
     for (int i = 0; i < HASHSIZE; i++) {
         hs[i] = 0;
