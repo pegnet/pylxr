@@ -33,7 +33,7 @@ class TestHash(unittest.TestCase):
         }
         for src, hash_hex in known_hashes.items():
             h = self.lxr.h(src)
-            assert h.hex() == hash_hex
+            assert h.hex() == hash_hex, f"observed ({h.hex()}) != expected({hash_hex})"
 
     def test_timing(self):
         t = timeit.timeit('lxr.h(b"HASH")', number=10000, globals={"lxr": self.lxr})
