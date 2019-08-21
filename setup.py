@@ -27,4 +27,5 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Utilities",
     ],
+    build_ext=build_ext,
 )
