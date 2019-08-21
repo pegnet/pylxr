@@ -4,7 +4,7 @@ from Cython.Build import cythonize, build_ext
 
 deps = {"pylxr": ["numpy", "cython"]}
 
-extensions = [Extension(name="pylxr.cpylxr", sources=["cpylxr.pyx"])]
+extensions = [Extension(name="cpylxr", sources=["cpylxr.pyx"])]
 
 setup(
     name="pylxr",
